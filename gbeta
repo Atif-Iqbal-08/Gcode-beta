@@ -1,0 +1,302 @@
+#!/usr/bin/env python
+
+
+from cgitb import text
+import code
+from fileinput import filename
+from pickle import TRUE
+from sys import flags
+#from tkinter.colorchooser import Chooser
+import gtk
+import os
+import csv
+
+
+class main:
+    def __init__(self):
+        self.builder = gtk.Builder()
+        self.builder.add_from_file('gbeta.glade')
+        self.builder.connect_signals(self)
+        self.window = self.builder.get_object("window1")
+        self.px = self.builder.get_object("px")
+        self.px.set_text("5")
+        self.py = self.builder.get_object("py")
+        self.py.set_text("5")
+        self.nx = self.builder.get_object("nx")
+        self.nx.set_text("10")
+        self.ny = self.builder.get_object("ny")
+        self.ny.set_text("10")
+        self.ns = self.builder.get_object("ns")
+        self.ns.set_text("1")
+        self.ds = self.builder.get_object("ds")
+        self.ds.set_text("0")
+        # self.statusbar = self.builder.get_object("statusbar1")
+        # self.context_id = self.statusbar.get_context_id("status")
+        self.filename = self.builder.get_object("filename")
+        self.filename.set_text("filename")
+        self.notebook = self.builder.get_object("notebook1")
+        self.notebook.connect("switch_page", self.callback1)
+        # 1 get the users home directory
+        self.current_folder = os.path.expanduser('~')
+        self.window.show()
+        self.indexflag = True
+        self.stagger = 'normal'
+
+    def callback1(self, notebook, tab, index):
+
+        if index == 0:
+            print("Auto Generate Spot Co-ordinate")
+            self.indexflag = True
+
+        elif index == 1:
+            print("Upload CSV Selected")
+            self.indexflag = False
+
+        else:
+            print("N/A")
+
+    def on_file_open_activate(self, menuitem, data=None):
+        print("file open clicked")
+        self.fcd = gtk.FileChooserDialog("Open...",
+                                         None,
+                                         gtk.FILE_CHOOSER_ACTION_OPEN,
+                                         (gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL, gtk.STOCK_OPEN, gtk.RESPONSE_OK))
+
+        # 2 set the current folder in the file chooser
+        self.fcd.set_current_folder(self.current_folder)
+
+        if os.path.isdir(os.getenv("HOME")+'/linuxcnc/configs'):
+            self.fcd.add_shortcut_folder(os.getenv("HOME")+'/linuxcnc/configs')
+        self.response = self.fcd.run()
+        if self.response == gtk.RESPONSE_OK:
+            self.string = []
+            print("Selected filepath: %s") % self.fcd.get_filename()
+            print(self.fcd.get_uri())
+            self.file = open(self.fcd.get_filename())
+            csv_reader = csv.reader(self.file)
+            next(csv_reader)
+            for line in csv_reader:
+                #print("G00 X"+line[0] + " Y" +line[1]+ " F5000")
+                # print("o2000")
+                self.string.append(
+                    "\n G01 X"+line[0] + " Y" + line[1] + " F5000 \n M98 P2000 L1")
+
+            # 3 if a file was choosen save the current folder
+            self.current_folder = self.fcd.get_current_folder()
+            self.fcd.destroy()
+
+    def button_select(self, widget):
+        if widget.get_active():
+            self.stagger = gtk.Buildable.get_name(widget)
+            print(' active ') + self.stagger
+
+    def on_generate_clicked(self, widget, data=None):
+        self.ns = self.builder.get_object("ns")
+        self.nos = self.ns.get_text()
+        self.ds = self.builder.get_object("ds")
+        self.dos = self.ds.get_text()
+        self.px = self.builder.get_object("px")
+        self.pitchx = self.px.get_text()
+        self.py = self.builder.get_object("py")
+        self.pitchy = self.py.get_text()
+        self.nx = self.builder.get_object("nx")
+        self.ncx = self.nx.get_text()
+        self.ny = self.builder.get_object("ny")
+        self.ncy = self.ny.get_text()
+        self.spotseq = " \n M7 \n G04 P3 \n M9 \n M66 P0 L3 Q9000"
+        self.block1 = "\n G91 G21"
+        self.block2 = "\n M98 P1000 L" + self.ncy
+        self.block3 = "\n G01 X-"+str(float(self.pitchx) * float(
+            self.ncx)) + " Y-" + str(float(self.pitchy)*float(self.ncy)) + " F5000"
+        self.block4 = "\n M30"
+        self.block5 = "\n\n O1000 \n M98 P2000 L" + self.ncx + "\n G01 X-" + \
+            str(float(self.pitchx) * float(self.ncx)) + \
+            " Y"+self.pitchy + " F5000 \n M99"
+
+        if float(self.nos) == 0 or float(self.nos) < 0 or float(self.dos) < 0:
+            print(" Invalid Initial Value")
+
+        elif float(self.nos) == 1:
+            self.block6 = "\n\n O2000 " + self.spotseq + \
+                "\n G01 X" + self.pitchx + " F5000 \n M99"
+            self.spot = self.block1 + self.block2 + self.block3 + \
+                self.block4 + self.block5 + self.block6
+
+        else:
+            self.td = (float(self.nos)-1) * float(self.dos)  # total distance
+            self.htd = 0.5*self.td  # half of distance
+            self.spf = " \n G00 Y-" + str(self.htd)
+            self.block6 = "\n\n O2000 " + self.spf + "\n M98 P3000 L" + \
+                str(float(self.nos)-1) + self.spotseq + "\n G01 X" + \
+                (self.pitchx) + " Y-"+str(self.htd)+" F5000 \n M99"
+            self.block7 = "\n\n O3000 " + self.spotseq + \
+                "\n G01 Y"+self.dos + " F5000 \n M99"
+
+         # case for spot
+
+        if self.indexflag == True:
+            print("\n Auto generating co-ordinate")
+
+            self.file1 = open("code.txt", 'w')
+            if self.stagger == 'normal' and float(self.nos) == 1:
+                self.code = self.spot
+
+            elif self.stagger == 'normal' and float(self.nos) > 1:
+                self.code = self.block1 + self.block2 + self.block3 + \
+                    self.block4 + self.block5 + self.block6 + self.block7
+
+            elif self.stagger == 'honeycomb' and float(self.nos) == 1:
+                self.code1 = []
+                self.flag = True
+
+                for i in range(int(self.ncy)):
+
+                    if self.flag == False:
+                        self.code2 = "\n M98 P2000 L" + self.ncx + "\n G01 X-" + \
+                            str(float(self.pitchx) * float(self.ncx)) + \
+                            " Y"+self.pitchy + " F5000 \n "
+                        self.code1.append(self.code2)
+
+                        self.flag = True
+
+                    elif self.flag == True:
+                        self.code2 = "\n M98 P2000 L" + self.ncx + "\n G01 X-" + \
+                            str((float(self.pitchx) * float(self.ncx))-float(self.pitchx)/2) + \
+                            " Y"+self.pitchy + " F5000 \n "
+                        self.code1.append(self.code2)
+
+                        self.flag = False
+
+                def listtostring(s):
+                    str1 = ""
+                    for ele in s:
+                        str1 += ele
+                    return str1
+
+                self.code3 = listtostring(self.code1)
+                self.block3 = "\n G01  Y-" + \
+                    str(float(self.pitchy)*float(self.ncy)) + " F5000"
+
+                self.code = self.block1 + self.code3 + self.block3 + "\n M30" + "\n\n O2000 " + self.spotseq + \
+                    "\n G01 X" + self.pitchx + " F5000 \n M99"
+
+            elif self.stagger == 'honeycomb' and float(self.nos) > 1:
+                self.code1 = []
+                self.flag = True
+                for i in range(int(self.ncy)):
+
+                    if self.flag == False:
+                        self.code2 = "\n M98 P2000 L" + self.ncx + "\n G01 X-" + \
+                            str(float(self.pitchx) * float(self.ncx)) + \
+                            " Y"+self.pitchy + " F5000 \n "
+                        self.code1.append(self.code2)
+
+                        self.flag = True
+
+                    elif self.flag == True:
+                        self.code2 = "\n M98 P2000 L" + self.ncx + "\n G01 X-" + \
+                            str((float(self.pitchx) * float(self.ncx))-float(self.pitchx)/2) + \
+                            " Y"+self.pitchy + " F5000 \n "
+                        self.code1.append(self.code2)
+
+                        self.flag = False
+
+                    def listtostring(s):
+                        str1 = ""
+                        for ele in s:
+                            str1 += ele
+                        return str1
+
+                self.code3 = listtostring(self.code1)
+                self.block3 = "\n G01  Y-" + \
+                    str(float(self.pitchy)*float(self.ncy)) + " F5000"
+
+                self.code = self.block1 + self.code3 + \
+                    self.block3 + "\n M30" + self.block6 + self.block7
+
+            print(self.code)
+            self.file1.write(self.code)
+            self.file2 = open("code.txt", 'r')
+            text = self.code
+            self.textview = self.builder.get_object("viewtext")
+            self.textbuffer = self.textview.get_buffer()
+            self.textbuffer.set_text(text)
+            self.file2.close()
+            self.file1.close()
+
+        elif self.indexflag == False:
+            self.file1 = open("code.txt", 'w')
+            self.block1 = "G90 G21"
+
+            print("Auto generating co-ordinate")
+
+            if (float(self.nos) == 1):
+                print(self.string)
+
+                def listtostring(s):
+                    str1 = ""
+                    for ele in s:
+                        str1 += ele
+                    return str1
+                print("in func " + listtostring(self.string))
+
+                self.code = self.block1 + \
+                    listtostring(
+                        self.string) + "\n G28 \n M30 " "\n\n O2000" + self.spotseq + "\n M99"
+
+            elif (float(self.nos) > 1):
+                print(self.string)
+
+                def listtostring(s):
+                    str1 = ""
+                    for ele in s:
+                        str1 += ele
+                    return str1
+                print("in func " + listtostring(self.string))
+
+                self.code = self.block1 + \
+                    listtostring(
+                        self.string) + "\n G28 \n M30 " "\n\n O2000 \n G91" + self.spf + "\n M98 P3000 L"+str(float(self.nos)-1) + self.spotseq + "\n G01 Y-"+str(self.htd) + \
+                    " F5000 \n M99" + self.block7
+
+            print(self.code)
+            self.file1.write(self.code)
+            self.file2 = open("code.txt", 'r')
+            text = self.code
+            self.textview = self.builder.get_object("viewtext")
+            self.textbuffer = self.textview.get_buffer()
+            self.textbuffer.set_text(text)
+            self.file2.close()
+            self.file1.close()
+
+    def on_file_save_as_activate(self, menuitem, data=None):
+        print('save')
+        self.fcd = gtk.FileChooserDialog("Save Project",None, gtk.FILE_CHOOSER_ACTION_SAVE,
+            (gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL,
+             gtk.STOCK_SAVE, gtk.RESPONSE_OK))
+
+        #self.win.add_filters(dialog)
+        self.fcd.set_current_folder(self.current_folder)
+        response = self.fcd.run()
+        if response == gtk.RESPONSE_OK:
+            file_path = self.fcd.get_filename()
+            openfile = open(file_path,'w')
+            openfile.write(self.code)
+            openfile.close()      
+            self.fcd.destroy()     
+            print("Save clicked")
+            print("File selected: " )
+            
+        elif response == gtk.RESPONSE_CANCEL:
+            print("Cancel clicked")
+
+        self.fcd.destroy()
+
+    def on_window1_destroy(self, object, data=None):
+        print "quit with cancel"
+        gtk.main_quit()
+
+
+if __name__ == "__main__":
+    main = main()
+    gtk.main()
