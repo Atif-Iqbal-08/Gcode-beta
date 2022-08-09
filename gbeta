@@ -30,8 +30,8 @@ class main:
         self.ns.set_text("1")
         self.ds = self.builder.get_object("ds")
         self.ds.set_text("0")
-        # self.statusbar = self.builder.get_object("statusbar1")
-        # self.context_id = self.statusbar.get_context_id("status")
+        self.statusbar = self.builder.get_object("statusbar1")
+        self.context_id = self.statusbar.get_context_id("status")
         self.filename = self.builder.get_object("filename")
         self.filename.set_text("filename")
         self.notebook = self.builder.get_object("notebook1")
@@ -41,17 +41,23 @@ class main:
         self.window.show()
         self.indexflag = True
         self.stagger = 'normal'
+        self.status_count = 0
 
     def callback1(self, notebook, tab, index):
 
         if index == 0:
             print("Auto Generate Spot Co-ordinate")
             self.indexflag = True
+            self.status_count += 1
+            self.statusbar.push(
+                self.context_id, "Auto Generate Gcode %s" % str(self.status_count))
 
         elif index == 1:
             print("Upload CSV Selected")
             self.indexflag = False
-
+            self.status_count += 1
+            self.statusbar.push(
+                self.context_id, "Upload CSV File Mode %s" % str(self.status_count))
         else:
             print("N/A")
 
@@ -106,8 +112,7 @@ class main:
         self.spotseq = " \n M7 \n G04 P3 \n M9 \n M66 P0 L3 Q9000"
         self.block1 = "\n G91 G21"
         self.block2 = "\n M98 P1000 L" + self.ncy
-        self.block3 = "\n G01 X-"+str(float(self.pitchx) * float(
-            self.ncx)) + " Y-" + str(float(self.pitchy)*float(self.ncy)) + " F5000"
+        self.block3 = "\n G01 " + " Y-" + str(float(self.pitchy)*float(self.ncy)) + " F5000"
         self.block4 = "\n M30"
         self.block5 = "\n\n O1000 \n M98 P2000 L" + self.ncx + "\n G01 X-" + \
             str(float(self.pitchx) * float(self.ncx)) + \
@@ -115,6 +120,9 @@ class main:
 
         if float(self.nos) == 0 or float(self.nos) < 0 or float(self.dos) < 0:
             print(" Invalid Initial Value")
+            self.status_count += 1
+            self.statusbar.push(
+                self.context_id, "Invalid Value Entered %s" % str(self.status_count))
 
         elif float(self.nos) == 1:
             self.block6 = "\n\n O2000 " + self.spotseq + \
@@ -148,10 +156,11 @@ class main:
             elif self.stagger == 'honeycomb' and float(self.nos) == 1:
                 self.code1 = []
                 self.flag = True
+                self.flag2 = True
 
                 for i in range(int(self.ncy)):
 
-                    if self.flag == False:
+                    if self.flag == False and self.flag2  
                         self.code2 = "\n M98 P2000 L" + self.ncx + "\n G01 X-" + \
                             str(float(self.pitchx) * float(self.ncx)) + \
                             " Y"+self.pitchy + " F5000 \n "
@@ -161,7 +170,7 @@ class main:
 
                     elif self.flag == True:
                         self.code2 = "\n M98 P2000 L" + self.ncx + "\n G01 X-" + \
-                            str((float(self.pitchx) * float(self.ncx))-float(self.pitchx)/2) + \
+                            str((float(self.pitchx) * float(self.ncx)+float)-float(self.pitchx)/2) + \
                             " Y"+self.pitchy + " F5000 \n "
                         self.code1.append(self.code2)
 
@@ -268,6 +277,9 @@ class main:
             self.textbuffer.set_text(text)
             self.file2.close()
             self.file1.close()
+        self.status_count += 1
+        self.statusbar.push(
+           self.context_id, " G-code Generated %s" % str(self.status_count))
 
     def on_file_save_as_activate(self, menuitem, data=None):
         print('save')
@@ -286,6 +298,9 @@ class main:
             self.fcd.destroy()     
             print("Save clicked")
             print("File selected: " )
+            self.status_count += 1
+            self.statusbar.push(
+                self.context_id, "File Saved %s" % str(self.status_count))
             
         elif response == gtk.RESPONSE_CANCEL:
             print("Cancel clicked")
