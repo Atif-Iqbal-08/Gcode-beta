@@ -4,11 +4,12 @@
 from cgitb import text
 import code
 from fileinput import filename
-from pickle import TRUE
+from pickle import FALSE, TRUE
 from sys import flags
 #from tkinter.colorchooser import Chooser
 import gtk
 import os
+#import gremlin
 import csv
 
 
@@ -42,6 +43,15 @@ class main:
         self.indexflag = True
         self.stagger = 'normal'
         self.status_count = 0
+        #gremlin
+        #self.gremlin = g_gremlin(self.ini_file_object) 
+
+#        self.gremlin.current_view = 'p'
+ #       self.plot = self.builder.get_object('hbox3')
+  #      self.plot.pack_start(self.gremlin)
+   #     self.plotreorder_child(self.gremlin,1)
+
+
 
     def callback1(self, notebook, tab, index):
 
@@ -152,29 +162,35 @@ class main:
             elif self.stagger == 'normal' and float(self.nos) > 1:
                 self.code = self.block1 + self.block2 + self.block3 + \
                     self.block4 + self.block5 + self.block6 + self.block7
+            ############################# HONEYCOMB WITH SPOT 1 #################################
 
             elif self.stagger == 'honeycomb' and float(self.nos) == 1:
                 self.code1 = []
                 self.flag = True
-                self.flag2 = True
+                self.flag2 = False
+                self.flag3 = False
 
                 for i in range(int(self.ncy)):
 
-                    if self.flag == False and self.flag2  
-                        self.code2 = "\n M98 P2000 L" + self.ncx + "\n G01 X-" + \
-                            str(float(self.pitchx) * float(self.ncx)) + \
-                            " Y"+self.pitchy + " F5000 \n "
-                        self.code1.append(self.code2)
-
-                        self.flag = True
-
-                    elif self.flag == True:
-                        self.code2 = "\n M98 P2000 L" + self.ncx + "\n G01 X-" + \
-                            str((float(self.pitchx) * float(self.ncx)+float)-float(self.pitchx)/2) + \
-                            " Y"+self.pitchy + " F5000 \n "
+                    if self.flag == True  : 
+                        self.code2 = "\n M98 P2000 L" + self.ncx + "\n G00 X-" + \
+                            str((float(self.pitchx) * float(self.ncx))-float(self.pitchx)/2) + \
+                            " Y"+self.pitchy + " \n "
                         self.code1.append(self.code2)
 
                         self.flag = False
+                        
+                        
+
+                    elif self.flag == False :
+                        self.code2 = "\n M98 P2000 L" + self.ncx + "\n G00 X-" + \
+                            str((float(self.pitchx) * float(self.ncx))+float(self.pitchx)/2) + " Y"+ self.pitchy + " \n "
+                        self.code1.append(self.code2)
+
+                        self.flag = True
+                        
+                 
+
 
                 def listtostring(s):
                     str1 = ""
@@ -183,42 +199,56 @@ class main:
                     return str1
 
                 self.code3 = listtostring(self.code1)
-                self.block3 = "\n G01  Y-" + \
-                    str(float(self.pitchy)*float(self.ncy)) + " F5000"
+                if float(self.ncy) % 2 ==0:
+            
+                    self.block3 = "\n G00  Y-" + \
+                    str(float(self.pitchy)*float(self.ncy))
+                else: 
+
+                    self.block3 = "\n G00 X-"+ str(float(self.pitchx)/2)+"  Y-" + \
+                    str(float(self.pitchy)*float(self.ncy)) 
 
                 self.code = self.block1 + self.code3 + self.block3 + "\n M30" + "\n\n O2000 " + self.spotseq + \
                     "\n G01 X" + self.pitchx + " F5000 \n M99"
+
+           ############################# HONEYCOMB WITH SPOT > 1 #####################################################################################################         
 
             elif self.stagger == 'honeycomb' and float(self.nos) > 1:
                 self.code1 = []
                 self.flag = True
                 for i in range(int(self.ncy)):
 
-                    if self.flag == False:
-                        self.code2 = "\n M98 P2000 L" + self.ncx + "\n G01 X-" + \
-                            str(float(self.pitchx) * float(self.ncx)) + \
-                            " Y"+self.pitchy + " F5000 \n "
-                        self.code1.append(self.code2)
-
-                        self.flag = True
-
-                    elif self.flag == True:
-                        self.code2 = "\n M98 P2000 L" + self.ncx + "\n G01 X-" + \
+                    if self.flag == True:
+                        self.code2 = "\n M98 P2000 L" + self.ncx + "\n G00 X-" + \
                             str((float(self.pitchx) * float(self.ncx))-float(self.pitchx)/2) + \
-                            " Y"+self.pitchy + " F5000 \n "
+                            " Y"+self.pitchy + " \n "
                         self.code1.append(self.code2)
 
                         self.flag = False
 
-                    def listtostring(s):
+                    elif self.flag == False:
+                        self.code2 = "\n M98 P2000 L" + self.ncx + "\n G00 X-" + \
+                            str((float(self.pitchx) * float(self.ncx))+float(self.pitchx)/2) + \
+                            " Y"+self.pitchy + " \n "
+                        self.code1.append(self.code2)
+
+                        self.flag = True
+
+                def listtostring(s):
                         str1 = ""
                         for ele in s:
                             str1 += ele
                         return str1
 
                 self.code3 = listtostring(self.code1)
-                self.block3 = "\n G01  Y-" + \
-                    str(float(self.pitchy)*float(self.ncy)) + " F5000"
+                if float(self.ncy) % 2 ==0:
+            
+                    self.block3 = "\n G00  Y-" + \
+                    str(float(self.pitchy)*float(self.ncy)) + ""
+                else: 
+
+                    self.block3 = "\n G00 X-"+ str(float(self.pitchx)/2)+"  Y-" + \
+                    str(float(self.pitchy)*float(self.ncy)) + ""
 
                 self.code = self.block1 + self.code3 + \
                     self.block3 + "\n M30" + self.block6 + self.block7
@@ -308,8 +338,11 @@ class main:
         self.fcd.destroy()
 
     def on_window1_destroy(self, object, data=None):
-        print "quit with cancel"
+        print ("quit with cancel")
         gtk.main_quit()
+#class g_gremlin(gremlin.Gremlin):
+ #   def __init__(self, inifile):
+  #      gremlin.Gremlin.__init__(self, inifile)
 
 
 if __name__ == "__main__":
